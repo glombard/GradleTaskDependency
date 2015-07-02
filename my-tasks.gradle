@@ -1,0 +1,54 @@
+/*
+
+Demonstrates the following concepts:
+
+1. Creating custom tasks with dependencies: taskB is dependent on taskA.
+2. Using upToDateWhen to to only run taskB if taskA also ran.
+3. Using onlyIf to optionally disable taskA if the 'skip' command-line property is specified.
+4. How to use afterEvaluate to make a task a dependency of another task.
+   In this case, we make all 'Test' tasks dependent on my custom task 'taskB'.
+
+Examples:
+
+Execute both taskA and taskB before running the unit tests:
+
+    ./gradlew testDebug
+
+Skip both taskA and taskB:
+
+    ./gradlew testDebug -Pskip
+
+Also see how to use setDidWork in your task action for even more flexibility.
+
+*/
+
+afterEvaluate {
+    project.tasks.withType(Test) {
+        dependsOn('taskB')
+    }
+}
+
+def shouldRunMyTasks = !project.hasProperty('skip')
+
+task taskA(type: MyDummyTask) {
+    taskName 'Task A'
+    onlyIf { shouldRunMyTasks }
+}
+
+task taskB(type: MyDummyTask, dependsOn: taskA) {
+    taskName 'Task B'
+    outputs.upToDateWhen { !dependsOnTaskDidWork() }
+}
+
+class MyDummyTask extends DefaultTask {
+    @Input
+    String taskName
+
+    MyDummyTask() {
+    }
+
+    @TaskAction
+    void action() {
+        println 'Running ' + taskName
+    }
+}
